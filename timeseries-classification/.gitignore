@@ -1,6 +1,9 @@
 # Data
 /data/
 
+# arxiv code
+/arxiv_code/
+
 # Mac OS-specific storage files
 .DS_Store
 
