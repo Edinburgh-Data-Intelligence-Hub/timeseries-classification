@@ -4,6 +4,11 @@
 # arxiv code
 /arxiv_code/
 
+# MLflow
+mlruns/
+*.mlruns/
+*/mlruns/
+
 # Mac OS-specific storage files
 .DS_Store
 
