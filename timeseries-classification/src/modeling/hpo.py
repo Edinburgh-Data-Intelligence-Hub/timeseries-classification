@@ -200,6 +200,11 @@ def main():
     print("  value (val_f1):", study.best_trial.value)
     print("  params:", study.best_trial.params)
 
+    # Save csv of all runs
+    exp = mlflow.get_experiment_by_name(hpo.experiment_name)  # change to your exp name
+    experiment_id = exp.experiment_id
+    runs = mlflow.search_runs(experiment_ids=[experiment_id])
+    runs.to_csv(f"{RESULTS_DIR}/HPO/{hpo.experiment_name}_HPO.csv", index=False)
 
 if __name__ == "__main__":
     main()
