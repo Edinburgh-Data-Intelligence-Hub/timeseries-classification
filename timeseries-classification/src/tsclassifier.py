@@ -5,13 +5,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from . import utils_timesfm
+from momentfm import MOMENTPipeline
 
 class Embedder(nn.Module):
     def __init__(self, name: str, device="cuda"):
         super().__init__()
-        self.name = name.lower()
+        self.name = name
         self.device = torch.device(device)
-
+        
         # load the model 
         if self.name == "timesfm":
             self.model = timesfm.TimesFM_2p5_200M_torch.from_pretrained("google/timesfm-2.5-200m-pytorch", torch_compile=True)
@@ -28,30 +29,56 @@ class Embedder(nn.Module):
             )
             self.embedding_dim = self.model.model.config.stacked_transformers.transformer.hidden_dims
             self.model.model.eval()
-
+        
+        elif self.name == "MOMENT-1-base": 
+            self.model = MOMENTPipeline.from_pretrained(
+                 "AutonLab/MOMENT-1-base", 
+                 model_kwargs={'task_name': 'embedding'}, # We are loading the model in `embedding` mode to learn representations
+                 # local_files_only=True,  # Whether or not to only look at local files (i.e., do not try to download the model).
+            )
+            
+            self.model.init()
+            self.embedding_dim = self.model.config.d_model
+            self.model.eval()
+        
         elif self.name == "vae":
             pass
             self.model = None # fill in with actual VAE model
             self.embedding_dim = None  # fill in with actual dimension
             self.model.to(self.device)
             self.model.eval()  # freeze by default
-
-        else:
-            raise ValueError(f"Unknown embedder: {name}")
-
         
-
+        else:
+            raise ValueError(f"Unknown embedder: {self.name}")
+    
+        
+    
     @torch.no_grad()
     def forward(self, inputs):
         if self.name == "timesfm":
-            _, outout_embeddings = utils_timesfm.get_embeddings(
+            _, output_embeddings = utils_timesfm.get_embeddings(
                 horizon=12,
                 model=self.model,
                 inputs=inputs,
                 layers_to_hook=-1,
             )
-            return outout_embeddings[0][:,-1,:]
-
+            return output_embeddings[0][:,-1,:]
+        
+        elif self.name == "MOMENT-1-base":
+            if isinstance(inputs, torch.Tensor):
+                inputs = torch.tensor(inputs, dtype=torch.float32).to(self.device)
+            if len(inputs.shape) == 0:
+                raise ValueError("Input tensor must have at least one dimension")
+            elif len(inputs.shape) > 3 :
+                raise ValueError("Input tensor must have at most three dimensions (B, C, L), currenlty has shape {inputs.shape}")
+            elif len(inputs.shape) != 3:
+                inputs = inputs.reshape(inputs.shape[0], 1, inputs.shape[1]) if len(inputs.shape)==2 else inputs.reshape(1, 1, inputs.shape[0]) # (B, C, L)
+                
+            with torch.no_grad():
+                embedd = self.model(x_enc=inputs)
+            
+            return embedd.embeddings
+        
         elif self.name == "vae":
             # replace with your VAE logic
             return self.model.encode(inputs)

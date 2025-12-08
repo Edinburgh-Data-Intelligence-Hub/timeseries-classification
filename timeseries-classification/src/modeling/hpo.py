@@ -159,8 +159,8 @@ class HPO:
 def main():
 
     hpo = HPO(
-        experiment_name="tsclassifier_optuna_cv_final",
-        embedder_name="timesfm",
+        experiment_name="tsclassifier_optuna_cv_moment_final",
+        embedder_name="MOMENT-1-base",
         max_epochs=250,
         patience=20,
         monitor_metric='f1',

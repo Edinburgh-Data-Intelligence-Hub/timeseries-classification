@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
+from momentfm import MOMENTPipeline
 
 import pickle
 import numpy as np
@@ -79,7 +80,7 @@ def create_model(
         raise Warning("Provided both embedder and embedder_name; using only embedder") # check this
     elif embedder is None:
         embedder = Embedder(name=embedder_name, device=device)
-
+    
     model = tsClassifier(
         embedder=embedder,
         num_classes=num_classes,
@@ -87,11 +88,11 @@ def create_model(
         dropout=dropout,
         freeze_embedder=freeze_embedder,
     ).to(device)
-
+    
     if freeze_embedder:
         for p in model.embedder.parameters():
             p.requires_grad_(False)
-
+    
     return model
 
 def train_one_epoch(
@@ -105,23 +106,23 @@ def train_one_epoch(
     running_loss = 0.0
     running_correct = 0
     running_total = 0
-
+    
     for inputs, targets in dataloader:
         inputs = inputs.to(device)
         targets = targets.to(device)
-
+        
         optimizer.zero_grad()
         logits = model(inputs)
         loss = criterion(logits, targets)
         loss.backward()
         optimizer.step()
-
+        
         running_loss += loss.item() * inputs.size(0)
         with torch.no_grad():
             preds = torch.argmax(logits, dim=1)
             running_correct += (preds == targets).sum().item()
             running_total += targets.size(0)
-
+        
     epoch_loss = running_loss / running_total
     epoch_acc = running_correct / running_total
     return epoch_loss, epoch_acc
@@ -148,66 +149,66 @@ def evaluate(
     running_loss = 0.0
     running_correct = 0
     running_total = 0
-
+    
     all_logits = []
     all_targets = []
-
+    
     for inputs, targets in dataloader:
         inputs = inputs.to(device)
         targets = targets.to(device)
-
+        
         logits = model(inputs)
         loss = criterion(logits, targets)
-
+        
         running_loss += loss.item() * inputs.size(0)
         preds = torch.argmax(logits, dim=1)
-
+        
         running_correct += (preds == targets).sum().item()
         running_total += targets.size(0)
-
+        
         all_logits.append(logits.detach().cpu())
         all_targets.append(targets.detach().cpu())
-
+        
     epoch_loss = running_loss / running_total
     accuracy = running_correct / running_total
-
+    
     # stack over whole dataset
     all_logits = torch.cat(all_logits, dim=0)
     all_targets = torch.cat(all_targets, dim=0)
-
+    
     y_true = all_targets.numpy()
     y_pred = all_logits.argmax(dim=1).numpy()
-
+    
     # defaults
     auroc = None
     auprc = None
-
+    
     if model.num_classes == 2:
         # binary: use prob of class 1
         probs = all_logits.softmax(dim=1)[:, 1].numpy()
-
+        
         # handle edge cases where only one class present in y_true
         try:
             auroc = roc_auc_score(y_true, probs)
         except ValueError:
             auroc = None
-
+        
         try:
             auprc = average_precision_score(y_true, probs)
         except ValueError:
             auprc = None
-
+        
         precision = precision_score(y_true, y_pred, zero_division=0)
         recall = recall_score(y_true, y_pred, zero_division=0)
         f1 = f1_score(y_true, y_pred, zero_division=0)
-
+        
     else:
         # multi-class: macro-averaged
         precision = precision_score(y_true, y_pred, average="macro", zero_division=0)
         recall = recall_score(y_true, y_pred, average="macro", zero_division=0)
         f1 = f1_score(y_true, y_pred, average="macro", zero_division=0)
         # AUROC/AUPRC can be added in one-vs-rest style 
-
+    
     metrics = {
         "loss": epoch_loss,
         "accuracy": accuracy,
@@ -241,7 +242,7 @@ def train_with_early_stopping(
         best_val_metrics: dict (metrics at best epoch)
     """
     model.to(device)
-
+    
     history = {
         "train_loss": [],
         "train_acc": [],
@@ -253,21 +254,21 @@ def train_with_early_stopping(
         "val_auroc": [],
         "val_auprc": [],
     }
-
+    
     best_score = -float("inf")
     best_epoch = 0
     best_val_metrics = None
     epochs_without_improvement = 0
-
+    
     for epoch in tqdm(range(max_epochs)):
         train_loss, train_acc = train_one_epoch(
             model, train_loader, optimizer, criterion, device
         )
-
+        
         val_metrics = evaluate(
             model, val_loader, criterion, device
         )
-
+        
         # log history
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
@@ -278,15 +279,15 @@ def train_with_early_stopping(
         history["val_f1"].append(val_metrics["f1"])
         history["val_auroc"].append(val_metrics["auroc"])
         history["val_auprc"].append(val_metrics["auprc"])
-
+        
         # choose metric to monitor
         if monitor_metric in val_metrics.keys():
             monitor = val_metrics[monitor_metric]
         else:
             raise ValueError(f"Unknown monitor_metric: {monitor_metric}")
-
+        
         # print progress
-
+        
         print(
             f"Epoch {epoch+1}/{max_epochs} "
             f"- train_loss: {train_loss:.4f} - train_acc: {train_acc:.4f} "
@@ -295,7 +296,7 @@ def train_with_early_stopping(
             f"- val_auroc: {val_metrics['auroc'] if val_metrics['auroc'] is not None else float('nan'):.4f}"
             f"- val_auprc: {val_metrics['auprc'] if val_metrics['auprc'] is not None else float('nan'):.4f}"
         )
-
+        
         # MLflow per-epoch logging (assumes an active run) ----
         mlflow.log_metrics(
             {
@@ -311,7 +312,7 @@ def train_with_early_stopping(
             },
             step=epoch,
         )
-
+        
         # early stopping bookkeeping
         if monitor > best_score:
             best_score = monitor
@@ -320,14 +321,14 @@ def train_with_early_stopping(
             epochs_without_improvement = 0
         else:
             epochs_without_improvement += 1
-
+        
         if epochs_without_improvement >= patience:
             print(
                 f"Early stopping at epoch {epoch+1}; "
                 f"best epoch was {best_epoch+1} with monitored metric = {best_score:.4f}"
             )
             break
-
+            
     return history, best_epoch, best_val_metrics
 
 
@@ -335,12 +336,12 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # MLflow setup 
-    mlflow.set_experiment("tsclassifier_timesfm")
+    mlflow.set_experiment("tsclassifier_MOMENT-1-base")
     with mlflow.start_run(run_name="train_trial"):
 
         with open(PROCESSED_DATA_DIR / "X_train.pkl", 'rb') as f:
             X = np.array(pickle.load(f))
-        f.close()
+
 
         with open(PROCESSED_DATA_DIR / "y_train.pkl", 'rb') as f:
             y = pickle.load(f)
@@ -369,7 +370,7 @@ def main():
             hidden_dims=[20, 10],
             dropout=0.1,
             freeze_embedder=True,
-            embedder_name="timesfm",
+            embedder_name="MOMENT-1-base",
         )
 
         optimizer = torch.optim.Adam(model.mlp.parameters(), lr=1e-3)
