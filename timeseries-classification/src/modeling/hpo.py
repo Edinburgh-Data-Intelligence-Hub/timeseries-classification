@@ -64,6 +64,7 @@ class HPO:
         )
 
         fold_scores = []  # store best metric per fold
+        final_epoch_ls = [] # store final per fold
 
         # One MLflow run per trial
         with mlflow.start_run(run_name=f"trial_{trial.number}", nested=False):
@@ -115,7 +116,7 @@ class HPO:
                     criterion = nn.CrossEntropyLoss()
 
                     #  train with early stopping on this fold 
-                    _, best_epoch, best_val_metrics = train_with_early_stopping(
+                    _, final_epoch, best_epoch, best_val_metrics = train_with_early_stopping(
                         model=model,
                         train_loader=train_loader,
                         val_loader=val_loader,
@@ -127,12 +128,17 @@ class HPO:
                         monitor_metric=self.monitor_metric,  # or "f1" / "accuracy"
                     )
 
+                    # add final epoch to list
+                    final_epoch_ls.append(final_epoch)
+                    mlflow.log_metric("final_epoch", final_epoch)
+
                     # score for this fold based on chosen metric
                     fold_score = best_val_metrics[self.monitor_metric]
                     fold_scores.append(fold_score)
 
                     # log summary metrics for THIS FOLD (child run)
                     mlflow.log_metric("best_epoch", best_epoch + 1)
+                   
                     for k, v in best_val_metrics.items():
                         mlflow.log_metric(
                             f"best_val_{k}",
@@ -153,6 +159,10 @@ class HPO:
 
             # log final CV score for this trial
             mlflow.log_metric(f"mean_best_val_{self.monitor_metric}", mean_score)
+
+            # final mean epochs
+            mean_final_epoch = int(np.mean(final_epoch_ls))
+            mlflow.log_metric("mean_final_epoch", mean_final_epoch)
 
         return mean_score
 

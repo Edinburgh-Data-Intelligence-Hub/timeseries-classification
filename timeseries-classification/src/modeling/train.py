@@ -238,6 +238,7 @@ def train_with_early_stopping(
 
     Returns:
         history: dict of lists (per-epoch metrics)
+        epoch: int (total epochs run)
         best_epoch: int
         best_val_metrics: dict (metrics at best epoch)
     """
@@ -329,7 +330,7 @@ def train_with_early_stopping(
             )
             break
             
-    return history, best_epoch, best_val_metrics
+    return history, epoch, best_epoch, best_val_metrics
 
 
 def main():
@@ -376,7 +377,7 @@ def main():
         optimizer = torch.optim.Adam(model.mlp.parameters(), lr=1e-3)
         criterion = nn.CrossEntropyLoss()
 
-        history, best_epoch, best_val_metrics = train_with_early_stopping(
+        history, final_epoch, best_epoch, best_val_metrics = train_with_early_stopping(
             model=model,
             train_loader=train_loader,
             val_loader=val_loader,
