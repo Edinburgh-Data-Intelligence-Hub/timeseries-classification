@@ -7,7 +7,10 @@ from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, SEED
 
 from sklearn.model_selection import train_test_split
 
-def process_track_data(df_tracks, dataset_name_list):
+def process_track_data(
+    df_tracks, 
+    dataset_name_list
+):
     liste_x=[]
     liste_y=[]
 

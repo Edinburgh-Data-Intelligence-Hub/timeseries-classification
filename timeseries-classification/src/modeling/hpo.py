@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import StratifiedKFold
 
-from src.modeling.train import train_with_early_stopping, evaluate, create_model, get_dataloaders
+from src.modeling.utils import train_with_early_stopping, evaluate, create_model, get_dataloaders
 from src.tsclassifier import Embedder, tsClassifier
 from src.config import *
 import math
