@@ -19,45 +19,37 @@ from sklearn.metrics import (
     recall_score,
     f1_score,
     roc_auc_score,
-    average_precision_score,
+    precision_recall_curve,
 )
 
 
-def get_dataloaders(
+def get_dataloader(
         batch_size: int = 32, 
-        X_train=None, 
-        y_train=None, 
-        X_test=None,
-        y_test=None
-    ) -> tuple[DataLoader, DataLoader, int]:
+        X=None, 
+        y=None, 
+    ) -> tuple[DataLoader, int]:
     """
     Creates DataLoaders for training and validation datasets.
     args:
         batch_size: The batch size for the DataLoaders.
-        X_train: Train data
-        y_train: Train label
-        X_test: Test data
-        y_test: Test label
+        X: data
+        y: label
     Returns:
-        train_loader, test_loader.
+        data_loader.
     
     """
-    for name, value in [("X_train", X_train), ("y_train", y_train), ("X_test", X_test), ("y_test", y_test)]:
+    for name, value in [("X", X), ("y", y)]:
         if value is None:
             raise ValueError(f"{name} must be provided, but got None.")
     
-    X_train = torch.tensor(X_train, dtype=torch.float32)
-    y_train = torch.tensor(y_train)
-    X_test = torch.tensor(X_test, dtype=torch.float32)
-    y_test = torch.tensor(y_test)
+    X = torch.tensor(X, dtype=torch.float32)
+    y = torch.tensor(y)
     
-    train_ds = TensorDataset(X_train, y_train)
-    test_ds = TensorDataset(X_test, y_test)
+    ds = TensorDataset(X, y)
     
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+    loader = DataLoader(ds, batch_size=batch_size, shuffle=True)
     
-    return train_loader, test_loader
+    return loader
 
 def create_model(
     device: torch.device = torch.device("cpu"),
@@ -135,6 +127,7 @@ def evaluate(
     criterion: nn.Module,
     device: torch.device,
     return_predictions: bool = False,
+    return_loss: bool = False
 ):
     """
     Returns a dict with:
@@ -147,7 +140,11 @@ def evaluate(
       - auprc (binary only, else None)
     If return_predictions=True, also returns probs, y_pred and targets tensors.
     """
+    if return_loss and criterion!=None:
+        Warning("Return loss set true, but criterion not provided, defaulting to return_loss=False")
+        
     model.eval()
+
     running_loss = 0.0
     running_correct = 0
     running_total = 0
@@ -161,9 +158,10 @@ def evaluate(
         targets = targets.to(device)
         
         logits = model(inputs)
-        loss = criterion(logits, targets)
-        
-        running_loss += loss.item() * inputs.size(0)
+
+        if return_loss:
+            loss = criterion(logits, targets)
+            running_loss += loss.item() * inputs.size(0)
         preds = torch.argmax(logits, dim=1)
         
         running_correct += (preds == targets).sum().item()
@@ -171,8 +169,8 @@ def evaluate(
         
         all_logits.append(logits.detach().cpu())
         all_targets.append(targets.detach().cpu())
-        
-    epoch_loss = running_loss / running_total
+    if return_loss:    
+        epoch_loss = running_loss / running_total
     accuracy = running_correct / running_total
     
     # stack over whole dataset
@@ -198,7 +196,8 @@ def evaluate(
             auroc = None
         
         try:
-            auprc = average_precision_score(y_true, probs)
+            precision, recall, _ = precision_recall_curve(y_true, probs)
+            auprc = auc(recall, precision)
         except ValueError:
             auprc = None
         
@@ -214,7 +213,6 @@ def evaluate(
         # AUROC/AUPRC can be added in one-vs-rest style 
     
     metrics = {
-        "loss": epoch_loss,
         "accuracy": accuracy,
         "precision": precision,
         "recall": recall,
@@ -222,6 +220,9 @@ def evaluate(
         "auroc": auroc,
         "auprc": auprc,
     }
+    
+    if return_loss:
+        metrics["loss"] = epoch_loss
 
     if return_predictions:
         return metrics, probs, y_pred, y_true
@@ -276,7 +277,7 @@ def train_with_early_stopping(
         )
         
         val_metrics = evaluate(
-            model, val_loader, criterion, device
+            model, val_loader, criterion, device, return_loss=True
         )
         
         # log history
@@ -343,6 +344,7 @@ def train_with_early_stopping(
         return model, history, epoch, best_epoch, best_val_metrics
     else:
         return history, epoch, best_epoch, best_val_metrics
+    
 
 def train_without_early_stopping(
     model: nn.Module,
@@ -377,7 +379,7 @@ def train_without_early_stopping(
         )
         
         _metrics = evaluate(
-            model, train_loader, criterion, device
+            model, train_loader, criterion, device, return_loss=True
         )
         
         # log history

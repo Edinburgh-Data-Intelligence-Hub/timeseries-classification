@@ -51,7 +51,6 @@ class Embedder(nn.Module):
         else:
             raise ValueError(f"Unknown embedder: {self.name}")
     
-        
     
     @torch.no_grad()
     def forward(self, inputs):
@@ -118,10 +117,11 @@ class tsClassifier(nn.Module):
         self.embedder = embedder
         self.freeze_embedder = freeze_embedder
         self.num_classes = num_classes
+        self.hidden_dims = hidden_dims
 
         self.mlp = EmbeddingMLP(
             input_dim=self.embedder.embedding_dim,
-            hidden_dims=hidden_dims,
+            hidden_dims=self.hidden_dims,
             num_classes=self.num_classes,
             dropout=dropout,
         )
@@ -138,3 +138,49 @@ class tsClassifier(nn.Module):
 
         logits = self.mlp(embeddings)
         return logits
+    
+def save_tsclassifier(
+    model: tsClassifier,
+    path: str,
+):
+    checkpoint = {
+        "mlp_state_dict": model.mlp.state_dict(), 
+        "config": {
+            "embedder_name": model.embedder.name,
+            "num_classes": model.num_classes,
+            "hidden_dims": model.mlp_hidden_dims,
+            "dropout": model.mlp_dropout,
+            "freeze_embedder": model.freeze_embedder,
+        },
+    }
+    
+    torch.save(checkpoint, path)
+
+def load_tsclassifier(
+    path: str, 
+    device: str
+) -> tsClassifier:
+    
+    # Load MLP
+    checkpoint = torch.load(path, map_location=device)
+    
+    # Load embedder
+    embedder = Embedder(
+        name=checkpoint["config"]["embedder_name"],
+        device=device,
+    )
+    
+    # Create tsClassifier
+    model = tsClassifier(
+        embedder=embedder,
+        num_classes=checkpoint["config"]["num_classes"],
+        hidden_dims=checkpoint["config"]["hidden_dims"],
+        dropout=checkpoint["config"]["dropout"],
+        freeze_embedder=checkpoint["config"]["freeze_embedder"],
+    )
+    
+    model.mlp.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
+    model.eval()
+
+    return model

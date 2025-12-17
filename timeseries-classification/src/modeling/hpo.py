@@ -89,12 +89,16 @@ class HPO:
                 X_val_fold = self.X[val_idx]
                 y_val_fold = self.y[val_idx]
 
-                train_loader, val_loader = get_dataloaders(
+                train_loader = get_dataloaders(
                     batch_size=batch_size, 
-                    X_train=X_train_fold, 
-                    y_train=y_train_fold,
-                    X_test=X_val_fold,
-                    y_test=y_val_fold
+                    X=X_train_fold, 
+                    y=y_train_fold,
+                )
+
+                val_loader = get_dataloaders(
+                    batch_size=batch_size, 
+                    X=X_val_fold,
+                    y=y_val_fold
                 )
 
                 #  child run per FOLD (nested=True) 
