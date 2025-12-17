@@ -4,14 +4,26 @@ import pandas as pd
 import numpy as np
 import pickle
 from config import RAW_DATA_DIR, PROCESSED_DATA_DIR, SEED
-from utils_dataset import fluo_scaler
 
 from sklearn.model_selection import train_test_split
 from tslearn.preprocessing import TimeSeriesScalerMeanVariance
 
+def fluo_scaler(data, feature_range = (0,1)): 
+    #takes a list of series as input, log them and scale them minmax to feature_range
+    global_min = np.min([np.min(np.log(serie)) for serie in data])
+    global_max = np.max([np.max(np.log(serie)) for serie in data])
+    data_scaled = []
+    for serie in data:
+        serie = np.log(serie)
+        serie = (serie - global_min) / (global_max - global_min)
+        serie = serie * (feature_range[1] - feature_range[0]) + feature_range[0]
+        data_scaled.append(serie)
+    return(data_scaled)
+
 def process_track_data(
     df_tracks, 
-    dataset_name_list
+    dataset_name_list,
+    dataset_type = "classifier_training" #or "autoencoder_training"
 ):
     liste_x=[]
     liste_y=[]
@@ -50,12 +62,19 @@ def process_track_data(
             if np.where(np.isnan(size_serie))[0].shape[0] > 0:
                 first_nan_idx = np.where(np.isnan(size_serie))[0][0]    
 
-            # usable_data = size_serie[:min(t_death,168)]
-            usable_data = (size_serie[:min(first_nan_idx,168)], sos_serie[:min(first_nan_idx,168)])
+            if dataset_type == "autoencoder_training":
+                usable_data = size_serie[:min(t_death,288)] # use data until cell death or 288 frames (24h), whichever comes first
+                if len(usable_data) > 72: #only keep tracks with at least 6 hours of data
+                    liste_x.append(usable_data)
+                    liste_y.append((medium,treatment,replicate,t_death))
 
-            if len(usable_data[0]) > 72+24:
-                liste_x.append(usable_data)
-                liste_y.append((medium,treatment,replicate,t_death))
+            elif dataset_type == "classifier_training":
+                usable_data = (size_serie[:min(first_nan_idx,168)], sos_serie[:min(first_nan_idx,168)]) #use data until first nan or 168 frames (14h, whichever comes first)
+
+                if len(usable_data[0]) > 72+24: #only keep tracks with at least 8 hours of data (24 frames of control + 72 frames of antibiotic exposure)
+                    liste_x.append(usable_data)
+                    liste_y.append((medium,treatment,replicate,t_death))
+
     if len(liste_x) == 0:
         raise ValueError("No usable data found. Please check the dataset and criteria.")
     return liste_x, liste_y
@@ -144,8 +163,8 @@ def main(
         'gluaa_ciptet_1', 
         'gluaa_ciptet_2'
     ]
-    liste_x, liste_y = process_track_data(df_tracks, dataset_name_list) 
 
+    liste_x, liste_y = process_track_data(df_tracks, dataset_name_list, "classifier_training" ) 
     scaling = True
     variable = 'sos' #or 'sos'
     task = 'cip' #or 'tet' or ciptet
@@ -181,7 +200,7 @@ def main(
         stratify=y,
         test_size=0.2,
         random_state=SEED)
-
+    
     #### SAVE PROCESSED DATA 
     # Full data
     with open(PROCESSED_DATA_DIR/'X_full.pkl', 'wb') as f:
@@ -207,6 +226,54 @@ def main(
     f.close()
 
     with open(PROCESSED_DATA_DIR/'y_test.pkl', 'wb') as f:
+        pickle.dump(y_test, f)
+    f.close()
+
+    ###### autoencoder training dataset creation
+    dataset_name_list_controls = ['gly_control_1','gly_control_2','gly_control_3','glu_control_1','glu_control_2','gluaa_control_1','gluaa_control_2']
+    liste_x_autoencoder, liste_y_autoencoder = process_track_data(df_tracks, dataset_name_list_controls, "autoencoder_training" ) 
+    X_train_preaug, X_test_preaug, y_train_preaug, y_test_preaug = train_test_split(liste_x_autoencoder, liste_y_autoencoder, test_size=0.1, random_state=SEED, shuffle=True)
+    #### data augmentation
+    ##### in X_train we change each sequence to series of size 72 with a roling window of 6
+    liste_x_train = []
+    liste_y_train = []
+    for i in range(len(X_train_preaug)):
+        usable_data = X_train_preaug[i]
+        for j in range(0, len(usable_data) - 72 + 1, 6):
+            liste_x_train.append(usable_data[j:j+72])
+            liste_y_train.append(y_train_preaug[i])
+    X_train = np.array(liste_x_train)
+    if scaling:
+        X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
+    y_train = np.array(liste_y_train)
+
+    # In X_test we cut each sequence into unique 72-long sequences
+    liste_x_test = []
+    liste_y_test = []
+    for i in range(len(X_test_preaug)):
+        usable_data = X_test_preaug[i]
+        for j in range(0, len(usable_data) - 72 + 1, 72):
+            liste_x_test.append(usable_data[j:j + 72])
+            liste_y_test.append(y_test_preaug[i])
+    X_test = np.array(liste_x_test)
+    if scaling:
+        X_test = TimeSeriesScalerMeanVariance().fit_transform(X_test)
+    y_test = np.array(liste_y_test)
+
+    # Save autoencoder training data
+    with open(PROCESSED_DATA_DIR/'X_autoencoder_train.pkl', 'wb') as f:
+        pickle.dump(X_train, f)
+    f.close()
+
+    with open(PROCESSED_DATA_DIR/'y_autoencoder_train.pkl', 'wb') as f:
+        pickle.dump(y_train, f)
+    f.close()
+
+    with open(PROCESSED_DATA_DIR/'X_autoencoder_test.pkl', 'wb') as f:
+        pickle.dump(X_test, f)
+    f.close()
+
+    with open(PROCESSED_DATA_DIR/'y_autoencoder_test.pkl', 'wb') as f:
         pickle.dump(y_test, f)
     f.close()
 
