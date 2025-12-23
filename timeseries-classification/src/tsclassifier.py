@@ -118,14 +118,15 @@ class tsClassifier(nn.Module):
         self.freeze_embedder = freeze_embedder
         self.num_classes = num_classes
         self.hidden_dims = hidden_dims
-
+        self.dropout = dropout
+        
         self.mlp = EmbeddingMLP(
             input_dim=self.embedder.embedding_dim,
             hidden_dims=self.hidden_dims,
             num_classes=self.num_classes,
-            dropout=dropout,
+            dropout=self.dropout,
         )
-
+    
     def forward(self, inputs):
         """
         raw_x: raw input (e.g. time series, images, whatever your embedder expects)
@@ -135,7 +136,7 @@ class tsClassifier(nn.Module):
                 embeddings = self.embedder(inputs)
         else:
             embeddings = self.embedder(inputs)
-
+        
         logits = self.mlp(embeddings)
         return logits
     
@@ -148,8 +149,8 @@ def save_tsclassifier(
         "config": {
             "embedder_name": model.embedder.name,
             "num_classes": model.num_classes,
-            "hidden_dims": model.mlp_hidden_dims,
-            "dropout": model.mlp_dropout,
+            "hidden_dims": model.hidden_dims,
+            "dropout": model.dropout,
             "freeze_embedder": model.freeze_embedder,
         },
     }
@@ -179,8 +180,8 @@ def load_tsclassifier(
         freeze_embedder=checkpoint["config"]["freeze_embedder"],
     )
     
-    model.mlp.load_state_dict(checkpoint["model_state_dict"])
+    model.mlp.load_state_dict(checkpoint["mlp_state_dict"])
     model.to(device)
     model.eval()
-
+    
     return model

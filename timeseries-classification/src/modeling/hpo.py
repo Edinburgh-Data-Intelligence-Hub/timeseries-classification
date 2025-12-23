@@ -5,7 +5,12 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import StratifiedKFold
 
-from src.modeling.utils import train_with_early_stopping, evaluate, create_model, get_dataloaders
+from src.modeling.utils import (
+    train_with_early_stopping, 
+    evaluate, 
+    create_model, 
+    get_dataloader
+)
 from src.tsclassifier import Embedder, tsClassifier
 from src.config import *
 import math
@@ -89,13 +94,13 @@ class HPO:
                 X_val_fold = self.X[val_idx]
                 y_val_fold = self.y[val_idx]
 
-                train_loader = get_dataloaders(
+                train_loader = get_dataloader(
                     batch_size=batch_size, 
                     X=X_train_fold, 
                     y=y_train_fold,
                 )
 
-                val_loader = get_dataloaders(
+                val_loader = get_dataloader(
                     batch_size=batch_size, 
                     X=X_val_fold,
                     y=y_val_fold

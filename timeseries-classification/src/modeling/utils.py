@@ -20,6 +20,7 @@ from sklearn.metrics import (
     f1_score,
     roc_auc_score,
     precision_recall_curve,
+    auc
 )
 
 
@@ -144,7 +145,7 @@ def evaluate(
         Warning("Return loss set true, but criterion not provided, defaulting to return_loss=False")
         
     model.eval()
-
+    
     running_loss = 0.0
     running_correct = 0
     running_total = 0
@@ -152,13 +153,13 @@ def evaluate(
     all_logits = []
     all_targets = []
     
-
+    
     for inputs, targets in data_loader:
         inputs = inputs.to(device)
         targets = targets.to(device)
         
         logits = model(inputs)
-
+        
         if return_loss:
             loss = criterion(logits, targets)
             running_loss += loss.item() * inputs.size(0)
@@ -223,7 +224,7 @@ def evaluate(
     
     if return_loss:
         metrics["loss"] = epoch_loss
-
+    
     if return_predictions:
         return metrics, probs, y_pred, y_true
     else:
@@ -446,7 +447,7 @@ def main():
         )
 
         # generate dataloaders and split into train and val
-        train_loader, val_loader = get_dataloaders(
+        train_loader, val_loader = get_dataloader(
             batch_size=32, 
             X_train=X_train, 
             y_train=y_train,

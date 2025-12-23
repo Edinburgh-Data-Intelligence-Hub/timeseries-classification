@@ -7,12 +7,18 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from momentfm import MOMENTPipeline
 from ast import literal_eval
+import random
 
 import pickle
 import numpy as np
-from src.tsclassifier import Embedder, tsClassifier
+from src.tsclassifier import load_tsclassifier
 from src.config import *
-from src.modeling.utils import train_without_early_stopping, evaluate, create_model, get_dataloaders
+from src.modeling.utils import (
+    train_without_early_stopping, 
+    evaluate, 
+    create_model, 
+    get_dataloader
+)
 import math
 
 from tqdm import tqdm
@@ -27,22 +33,26 @@ def main(
     predictions_path: Path = PROCESSED_DATA_DIR / "test_predictions.csv",
     # -----------------------------------------
 ):
-    embedder_name = "MOMENT-1-base" # "timesfm" or "MOMENT-1-base"
+    random.seed(SEED)
+    batch_size: int = 32
+    embedder_name = "timesfm" # "timesfm" or "MOMENT-1-base"
     ename = "timesfm" if embedder_name == "timesfm" else "moment"
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  
+    
     with open(PROCESSED_DATA_DIR / "X_test.pkl", 'rb') as f:
         X_test = np.array(pickle.load(f))
-
+    
     with open(PROCESSED_DATA_DIR / "y_test.pkl", 'rb') as f:
         y_test = pickle.load(f)
         y_test = np.array(y_test)
-
-
-    test_loader = get_dataloaders(
+    
+    test_loader = get_dataloader(
         batch_size=batch_size, 
         X=X_test, 
         y=y_test,
     )
+    
+    model = load_tsclassifier(MODELS_DIR / f"tsclassifier_{ename}.pt", device)
     
     # Evaluate on test set
     test_metrics, y_probs, y_pred, y_true = evaluate(
