@@ -1,4 +1,4 @@
-from vrae.config import MODELS_DIR, PROCESSED_DATA_DIR
+# from ..vrae.config import MODELS_DIR, PROCESSED_DATA_DIR
 
 import torch
 import torch.nn as nn
@@ -35,14 +35,15 @@ def main(
 ):
     random.seed(SEED)
     batch_size: int = 32
-    embedder_name = "timesfm" # "timesfm" or "MOMENT-1-base"
+    embedder_name = "MOMENT-1-base" # "timesfm" or "MOMENT-1-base"
     ename = "timesfm" if embedder_name == "timesfm" else "moment"
+    task = 'cip' #cip, tet or ciptet
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  
     
-    with open(PROCESSED_DATA_DIR / "X_test.pkl", 'rb') as f:
+    with open(PROCESSED_DATA_DIR / f"X_{task}_test.pkl", 'rb') as f:
         X_test = np.array(pickle.load(f))
     
-    with open(PROCESSED_DATA_DIR / "y_test.pkl", 'rb') as f:
+    with open(PROCESSED_DATA_DIR / f"y_{task}_test.pkl", 'rb') as f:
         y_test = pickle.load(f)
         y_test = np.array(y_test)
     
@@ -51,8 +52,8 @@ def main(
         X=X_test, 
         y=y_test,
     )
-    
-    model = load_tsclassifier(MODELS_DIR / f"tsclassifier_{ename}.pt", device)
+
+    model = load_tsclassifier(MODELS_DIR / f"tsclassifier_{ename}_{task}.pt", device)
     
     # Evaluate on test set
     test_metrics, y_probs, y_pred, y_true = evaluate(
@@ -74,10 +75,8 @@ def main(
         }
     )
     
-    results_df.to_csv(f"{RESULTS_DIR}/predictions/final_test_predictions_tsclassifier_{ename}.csv", index=False)
-
-    
+    results_df.to_csv(f"{RESULTS_DIR}/predictions/final_test_predictions_tsclassifier_{ename}_{task}.csv", index=False)
 
 
 if __name__ == "__main__":
-    app()
+    main()

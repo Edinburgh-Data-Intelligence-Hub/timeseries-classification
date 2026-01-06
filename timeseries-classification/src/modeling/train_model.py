@@ -25,13 +25,14 @@ import mlflow
 
 # Train Final model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-embedder_name = "timesfm" # "timesfm" or "MOMENT-1-base"
+embedder_name = "MOMENT-1-base" # "timesfm" or "MOMENT-1-base"
+task = 'ciptet' #cip, tet or ciptet
 ename = "timesfm" if embedder_name == "timesfm" else "moment"
 
 random.seed(SEED)
 
 # MLflow setup 
-mlflow.set_experiment(f"tsclassifier_{ename}_final_train")
+mlflow.set_experiment(f"tsclassifier_{ename}_{task}_final_train")
 with mlflow.start_run(run_name="train_final_model") as run:
     # Get best hyperparameters from HPO results
     HPO_df = pd.read_csv(f"{RESULTS_DIR}/HPO/tsclassifier_optuna_cv_{ename}_final_HPO.csv")
@@ -54,35 +55,22 @@ with mlflow.start_run(run_name="train_final_model") as run:
         "embedder_name": embedder_name,
     })
     
-    with open(PROCESSED_DATA_DIR / "X_train.pkl", 'rb') as f:
+    with open(PROCESSED_DATA_DIR / f"X_{task}_train.pkl", 'rb') as f:
         X_train = np.array(pickle.load(f))
 
-    with open(PROCESSED_DATA_DIR / "X_test.pkl", 'rb') as f:
-        X_test = np.array(pickle.load(f))
-
-    with open(PROCESSED_DATA_DIR / "y_train.pkl", 'rb') as f:
+    with open(PROCESSED_DATA_DIR / f"y_{task}_train.pkl", 'rb') as f:
         y_train = pickle.load(f)
         num_classes = len(set(y_train))
         y_train = np.array(y_train)
-
-    with open(PROCESSED_DATA_DIR / "y_test.pkl", 'rb') as f:
-        y_test = pickle.load(f)
-        y_test = np.array(y_test)
     
-    if num_classes != len(set(y_test)):
-        raise ValueError(f"Number of classes in train {num_classes} and test {len(set(y_test))} do not match!")
+    # if num_classes != len(set(y_test)):
+    #     raise ValueError(f"Number of classes in train {num_classes} and test {len(set(y_test))} do not match!")
     
     # generate dataloaders and split into train and val
     train_loader = get_dataloader(
         batch_size=batch_size, 
         X=X_train, 
         y=y_train,
-    )
-
-    test_loader = get_dataloader(
-        batch_size=batch_size, 
-        X=X_test, 
-        y=y_test,
     )
 
     # Create model
@@ -110,46 +98,9 @@ with mlflow.start_run(run_name="train_final_model") as run:
     )
     
     # Save model
-    save_tsclassifier(model, MODELS_DIR / f"tsclassifier_{ename}.pt")
+    save_tsclassifier(model, MODELS_DIR / f"tsclassifier_{ename}_{task}.pt")
 
-    # Evaluate on test set
-    test_metrics, y_probs, y_pred, y_true = evaluate(
-        model=model,
-        data_loader=test_loader,
-        criterion=criterion,
-        device=device,
-        return_predictions=True,
-    )
-
-    print(f"Final Test Metrics: {test_metrics}")
-    # MLflow logging 
-    mlflow.log_metrics(
-        {
-            "test_acc": test_metrics["accuracy"],
-            "test_precision": test_metrics["precision"],
-            "test_recall": test_metrics["recall"],
-            "test_f1": test_metrics["f1"],
-            "test_auroc": test_metrics["auroc"] if test_metrics["auroc"] is not None else float("nan"),
-            "test_auprc": test_metrics["auprc"] if test_metrics["auprc"] is not None else float("nan"),
-        }
-    )
-    
-    # Save test predictions
-    results_df = pd.DataFrame(
-        {   
-            "y_true": y_true,
-            "y_pred": y_pred,
-            "y_probs": y_probs,
-        }
-    )
-    
-    results_df.to_csv(f"{RESULTS_DIR}/predictions/final_test_predictions_tsclassifier_{ename}.csv", index=False)
 
 # (optional) you could also save the model as an artifact here
 # torch.save(model.state_dict(), "model.pt")
 # mlflow.log_artifact("model.pt")
-
-
-
-
-
