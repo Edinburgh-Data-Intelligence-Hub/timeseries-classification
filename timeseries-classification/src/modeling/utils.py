@@ -60,6 +60,7 @@ def create_model(
     freeze_embedder: bool = True,
     embedder_name: str = None,
     embedder: Embedder = None,
+    embedder_path: str = None
 ) -> tsClassifier:
     """
     Factory to create a tsClassifier.
@@ -72,7 +73,10 @@ def create_model(
     elif embedder is not None and embedder_name is not None:
         raise Warning("Provided both embedder and embedder_name; using only embedder") # check this
     elif embedder is None:
-        embedder = Embedder(name=embedder_name, device=device)
+        embedder = Embedder(
+            name=embedder_name, 
+            device=device,
+            model_path=embedder_path)
     
     model = tsClassifier(
         embedder=embedder,

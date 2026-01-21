@@ -28,16 +28,15 @@ import mlflow
 
 def main(
     # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    features_path: Path = PROCESSED_DATA_DIR / "test_features.csv",
-    model_path: Path = MODELS_DIR / "model.pkl",
-    predictions_path: Path = PROCESSED_DATA_DIR / "test_predictions.csv",
+    features_path: Path = PROCESSED_DATA_DIR,
+    model_path: Path = MODELS_DIR,
     # -----------------------------------------
 ):
     random.seed(SEED)
     batch_size: int = 32
-    embedder_name = "MOMENT-1-base" # "timesfm" or "MOMENT-1-base"
-    ename = "timesfm" if embedder_name == "timesfm" else "moment"
-    task = 'cip' #cip, tet or ciptet
+    embedder_name = "vae" # "timesfm" or "MOMENT-1-base" or "vae"
+    ename = EMBEDDER_NAME_MAP[embedder_name]
+    task = 'ciptet' #cip, tet or ciptet
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  
     
     with open(PROCESSED_DATA_DIR / f"X_{task}_test.pkl", 'rb') as f:
@@ -53,7 +52,11 @@ def main(
         y=y_test,
     )
 
-    model = load_tsclassifier(MODELS_DIR / f"tsclassifier_{ename}_{task}.pt", device)
+    model = load_tsclassifier(
+        model_path = MODELS_DIR / f"tsclassifier_{ename}_{task}.pt", 
+        model_dir = MODELS_DIR,
+        device = device,
+    )
     
     # Evaluate on test set
     test_metrics, y_probs, y_pred, y_true = evaluate(

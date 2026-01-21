@@ -400,8 +400,8 @@ class VRAE(BaseEstimator, nn.Module):
 
         test_loader = DataLoader(dataset = dataset,
                                  batch_size = self.batch_size,
-                                 shuffle = False,
-                                 drop_last=True) # Don't shuffle for test_loader
+                                 shuffle = False, # Don't shuffle for test_loader
+                                 drop_last=True) 
 
         if self.is_fitted:
             with torch.no_grad():
@@ -440,8 +440,8 @@ class VRAE(BaseEstimator, nn.Module):
 
         test_loader = DataLoader(dataset = dataset,
                                  batch_size = self.batch_size,
-                                 shuffle = False,
-                                 drop_last=True) # Don't shuffle for test_loader
+                                 shuffle = False, # Don't shuffle for test_loader
+                                 drop_last = False) # Not sure why it was set True, it is now set to false
         if self.is_fitted:
             with torch.no_grad():
                 z_run = []
@@ -499,7 +499,6 @@ class VRAE(BaseEstimator, nn.Module):
         self.is_fitted = True
         print(self.use_cuda)
         if self.use_cuda==False:
-            print("here")
             state_dict = torch.load(PATH, map_location=torch.device('cpu'))
         else:
             state_dict = torch.load(PATH)
