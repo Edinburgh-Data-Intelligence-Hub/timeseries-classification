@@ -54,7 +54,7 @@ class HPO:
         # --- sample hyperparameters ---
         # hidden_dim1 = trial.suggest_int("hidden_dim1", 16, 128, log=True)
         # hidden_dim2 = trial.suggest_int("hidden_dim2", 8, 64, log=True)
-        hidden_dim1 = 20
+        hidden_dim1 = 20 # Tested earlier and found to be best
         hidden_dim2 = 10
         hidden_dim = [hidden_dim1, hidden_dim2]
         dropout = trial.suggest_float("dropout", 0.0, 0.5)
