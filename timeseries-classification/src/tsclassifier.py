@@ -3,15 +3,20 @@ import timesfm
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+from tslearn.preprocessing import TimeSeriesScalerMeanVariance
+from torch.utils.data import TensorDataset
 
 from . import utils_timesfm
 from momentfm import MOMENTPipeline
+from .vrae import VRAE
+from .config import *
 
 class Embedder(nn.Module):
-    def __init__(self, name: str, device="cuda"):
+    def __init__(self, name: str, device="cuda", embedder_dir=None):
         super().__init__()
         self.name = name
         self.device = torch.device(device)
+        self.embedder_dir = embedder_dir
         
         # load the model 
         if self.name == "timesfm":
@@ -42,11 +47,24 @@ class Embedder(nn.Module):
             self.model.eval()
         
         elif self.name == "vae":
-            pass
-            self.model = None # fill in with actual VAE model
-            self.embedding_dim = None  # fill in with actual dimension
-            self.model.to(self.device)
-            self.model.eval()  # freeze by default
+            latent_length = 12
+            sequence_length = 72
+            number_of_features = 1
+            hidden_size = 90
+            hidden_layer_depth = 2
+
+            cuda = True if self.device=='cuda' else False
+            model = VRAE(
+                sequence_length=sequence_length,
+                number_of_features = number_of_features,
+                hidden_size = hidden_size, 
+                hidden_layer_depth = hidden_layer_depth,
+                latent_length = latent_length,
+                cuda = cuda
+            )
+            model.load(f'{self.embedder_dir}/model_12.pth')
+            self.model = model # fill in with actual VAE model
+            self.embedding_dim = latent_length
         
         else:
             raise ValueError(f"Unknown embedder: {self.name}")
@@ -80,7 +98,14 @@ class Embedder(nn.Module):
         
         elif self.name == "vae":
             # replace with your VAE logic
-            return self.model.encode(inputs)
+            return self.model.transform(
+                TensorDataset(
+                    torch.from_numpy(
+                        TimeSeriesScalerMeanVariance().fit_transform(inputs)
+                    )
+                )
+            )
+        
 
 class EmbeddingMLP(nn.Module):
     def __init__(self, input_dim, hidden_dims=[20, 10], num_classes=2, dropout=0.1):
@@ -108,7 +133,7 @@ class EmbeddingMLP(nn.Module):
 class tsClassifier(nn.Module):
     def __init__(self, embedder, num_classes,
                  hidden_dims=[20, 10], dropout=0.1,
-                 freeze_embedder=True):
+                 freeze_embedder=True, embedder_path=None):
         """
         embed_fn: callable that maps raw_x -> embeddings (B, embedding_dim)
                   can be a plain function or an nn.Module with __call__
@@ -136,13 +161,16 @@ class tsClassifier(nn.Module):
                 embeddings = self.embedder(inputs)
         else:
             embeddings = self.embedder(inputs)
-        
+
+        if not isinstance(embeddings, torch.Tensor):
+            embeddings = torch.as_tensor(embeddings)
+
         logits = self.mlp(embeddings)
         return logits
     
 def save_tsclassifier(
     model: tsClassifier,
-    path: str,
+    model_path: str,
 ):
     checkpoint = {
         "mlp_state_dict": model.mlp.state_dict(), 
@@ -155,20 +183,22 @@ def save_tsclassifier(
         },
     }
     
-    torch.save(checkpoint, path)
+    torch.save(checkpoint, model_path)
 
 def load_tsclassifier(
-    path: str, 
-    device: str
+    model_path: str, 
+    device: str,
+    model_dir: str = MODELS_DIR,
 ) -> tsClassifier:
     
     # Load MLP
-    checkpoint = torch.load(path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device)
     
     # Load embedder
     embedder = Embedder(
         name=checkpoint["config"]["embedder_name"],
         device=device,
+        embedder_dir=model_dir
     )
     
     # Create tsClassifier
@@ -185,3 +215,5 @@ def load_tsclassifier(
     model.eval()
     
     return model
+
+

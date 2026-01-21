@@ -18,3 +18,9 @@ FIGURES_DIR = RESULTS_DIR / "figures"
 
 SEED = 42
 
+EMBEDDER_NAME_MAP = {
+    "timesfm": "timesfm",
+    "MOMENT-1-base": "moment",
+    "vae": "vae",
+}
+
