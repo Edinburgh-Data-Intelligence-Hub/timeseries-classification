@@ -178,8 +178,8 @@ class HPO:
 def main():
 
     hpo = HPO(
-        experiment_name="tsclassifier_optuna_cv_moment_final",
-        embedder_name="MOMENT-1-base",
+        experiment_name="tsclassifier_optuna_cv_ts2vec_final",
+        embedder_name="ts2vec",
         max_epochs=250,
         patience=20,
         monitor_metric='f1',
@@ -187,11 +187,11 @@ def main():
     )
 
     # load data ONCE instead of every trial
-    with open(PROCESSED_DATA_DIR / "X_train.pkl", "rb") as f:
+    with open(PROCESSED_DATA_DIR / "X_ciptet_train.pkl", "rb") as f:
         X = pickle.load(f)
         hpo.X = np.array(X)
 
-    with open(PROCESSED_DATA_DIR / "y_train.pkl", "rb") as f:
+    with open(PROCESSED_DATA_DIR / "y_ciptet_train.pkl", "rb") as f:
         y = pickle.load(f)
         num_classes = len(set(y))
         hpo.num_classes = num_classes

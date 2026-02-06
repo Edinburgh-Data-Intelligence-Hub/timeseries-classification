@@ -64,7 +64,7 @@ def create_model(
 ) -> tsClassifier:
     """
     Factory to create a tsClassifier.
-
+    
     If shared_embedder is provided, reuse it.
     Otherwise create a new Embedder(name="timesfm").
     """
@@ -76,7 +76,7 @@ def create_model(
         embedder = Embedder(
             name=embedder_name, 
             device=device,
-            model_path=embedder_path)
+            embedder_dir=embedder_path)
     
     model = tsClassifier(
         embedder=embedder,
