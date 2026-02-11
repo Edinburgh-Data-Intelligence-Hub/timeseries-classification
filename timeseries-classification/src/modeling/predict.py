@@ -34,9 +34,9 @@ def main(
 ):
     random.seed(SEED)
     batch_size: int = 32
-    embedder_name = "vae" # "timesfm" or "MOMENT-1-base" or "vae"
+    embedder_name = "ts2vec" # "timesfm" or "MOMENT-1-base" or "vae" or "ts2vec"
     ename = EMBEDDER_NAME_MAP[embedder_name]
-    task = 'ciptet' #cip, tet or ciptet
+    task = 'cip' #cip, tet or ciptet
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  
     
     with open(PROCESSED_DATA_DIR / f"X_{task}_test.pkl", 'rb') as f:
@@ -51,7 +51,7 @@ def main(
         X=X_test, 
         y=y_test,
     )
-
+    
     model = load_tsclassifier(
         model_path = MODELS_DIR / f"tsclassifier_{ename}_{task}.pt", 
         model_dir = MODELS_DIR,

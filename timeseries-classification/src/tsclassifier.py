@@ -10,6 +10,8 @@ from . import utils_timesfm
 from momentfm import MOMENTPipeline
 from .vrae import VRAE
 from .config import *
+from src.ts2vec import TS2Vec, save_checkpoint_callback
+import src.utils_ts2vec
 
 class Embedder(nn.Module):
     def __init__(self, name: str, device="cuda", embedder_dir=None):
@@ -20,7 +22,11 @@ class Embedder(nn.Module):
         
         # load the model 
         if self.name == "timesfm":
-            self.model = timesfm.TimesFM_2p5_200M_torch.from_pretrained("google/timesfm-2.5-200m-pytorch", torch_compile=True)
+            self.model = timesfm.TimesFM_2p5_200M_torch.from_pretrained(
+                "google/timesfm-2.5-200m-pytorch",
+                torch_compile=True
+            )
+
             self.model.compile(
                 timesfm.ForecastConfig(
                     max_context=1024,
@@ -47,7 +53,9 @@ class Embedder(nn.Module):
             self.model.eval()
         
         elif self.name == "vae":
-            latent_length = 12
+            # Parameters hardcoded from VAE antibiotic_control_classification.ipynb
+            # change/automate as needed
+            latent_length = 12 
             sequence_length = 72
             number_of_features = 1
             hidden_size = 90
@@ -62,10 +70,19 @@ class Embedder(nn.Module):
                 latent_length = latent_length,
                 cuda = cuda
             )
-            model.load(f'{self.embedder_dir}/model_12.pth')
+            model.load(f'{self.embedder_dir}/model_12.pth') #hardcoded path, change/automate as needed
             self.model = model # fill in with actual VAE model
             self.embedding_dim = latent_length
         
+        elif self.name == "ts2vec":
+            model = TS2Vec(     
+                input_dims=1, # 1D time series
+                device=self.device,
+            )
+            # The train loss is quite stable after 60 epochs, plot loss_ts2vec.csv to verify (2_ts2vec_loss.ipynb)
+            model.load(f'{MODELS_DIR}/ts2vec_encoders/model_epoch_60_outdims_320.pkl') #hardcoded path, change/automate as needed
+            self.embedding_dim =  model._net.output_dims
+            self.model = model
         else:
             raise ValueError(f"Unknown embedder: {self.name}")
     
@@ -82,7 +99,7 @@ class Embedder(nn.Module):
             return output_embeddings[0][:,-1,:]
         
         elif self.name == "MOMENT-1-base":
-            if isinstance(inputs, torch.Tensor):
+            if not isinstance(inputs, torch.Tensor):
                 inputs = torch.tensor(inputs, dtype=torch.float32).to(self.device)
             if len(inputs.shape) == 0:
                 raise ValueError("Input tensor must have at least one dimension")
@@ -106,6 +123,22 @@ class Embedder(nn.Module):
                 )
             )
         
+        elif self.name == "ts2vec":
+            inputs = inputs.cpu().numpy() if isinstance(inputs, torch.Tensor) else np.array(inputs)
+            if len(inputs.shape) == 0:
+                raise ValueError("Input tensor must have at least one dimension")
+            elif len(inputs.shape) > 3 :
+                raise ValueError(f"Input tensor must have at most three dimensions (B, C, L), currenlty has shape {inputs.shape}")
+            elif len(inputs.shape) != 3:
+                inputs = inputs.reshape(inputs.shape[0], inputs.shape[1], 1) if len(inputs.shape)==2 else inputs.reshape(1, inputs.shape[0], 1) # (B, C, L)
+                
+            with torch.no_grad():
+                embeddings = self.model.encode(inputs, encoding_window='full_series')
+            embeddings = torch.as_tensor(embeddings)
+            return embeddings
+            
+        else:
+            raise ValueError(f"Unknown embedder: {self.name}")
 
 class EmbeddingMLP(nn.Module):
     def __init__(self, input_dim, hidden_dims=[20, 10], num_classes=2, dropout=0.1):

@@ -22,5 +22,6 @@ EMBEDDER_NAME_MAP = {
     "timesfm": "timesfm",
     "MOMENT-1-base": "moment",
     "vae": "vae",
+    "ts2vec": "ts2vec",
 }
 

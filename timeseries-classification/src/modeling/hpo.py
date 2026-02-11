@@ -54,7 +54,7 @@ class HPO:
         # --- sample hyperparameters ---
         # hidden_dim1 = trial.suggest_int("hidden_dim1", 16, 128, log=True)
         # hidden_dim2 = trial.suggest_int("hidden_dim2", 8, 64, log=True)
-        hidden_dim1 = 20
+        hidden_dim1 = 20 # Tested earlier and found to be best
         hidden_dim2 = 10
         hidden_dim = [hidden_dim1, hidden_dim2]
         dropout = trial.suggest_float("dropout", 0.0, 0.5)
@@ -178,8 +178,8 @@ class HPO:
 def main():
 
     hpo = HPO(
-        experiment_name="tsclassifier_optuna_cv_moment_final",
-        embedder_name="MOMENT-1-base",
+        experiment_name="tsclassifier_optuna_cv_ts2vec_final",
+        embedder_name="ts2vec",
         max_epochs=250,
         patience=20,
         monitor_metric='f1',
@@ -187,11 +187,11 @@ def main():
     )
 
     # load data ONCE instead of every trial
-    with open(PROCESSED_DATA_DIR / "X_train.pkl", "rb") as f:
+    with open(PROCESSED_DATA_DIR / "X_ciptet_train.pkl", "rb") as f:
         X = pickle.load(f)
         hpo.X = np.array(X)
 
-    with open(PROCESSED_DATA_DIR / "y_train.pkl", "rb") as f:
+    with open(PROCESSED_DATA_DIR / "y_ciptet_train.pkl", "rb") as f:
         y = pickle.load(f)
         num_classes = len(set(y))
         hpo.num_classes = num_classes
