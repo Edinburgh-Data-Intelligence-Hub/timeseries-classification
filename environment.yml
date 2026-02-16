@@ -1,14 +1,32 @@
 name: ts-classification-env
 channels:
   - conda-forge
-  - defaults
 dependencies:
-  - python=3.10
-  - numpy
-  - pandas
-  - matplotlib
-  - scikit-learn
-  - pytorch
-  - tslearn
-  - plotly
+  - python=3.11.0
   - pip
+  - pip:
+      - huggingface-hub==0.24.0
+      # - joblib==1.5.2
+      # - json5==0.12.1
+      - jupyterlab==4.5.0
+      - matplotlib==3.10.7
+      # - mistune==3.1.4
+      - mlflow==3.6.0
+      - momentfm
+      - notebook==7.5.0
+      - optuna==4.6.0
+      - pandas==2.3.3
+      # - statsmodels==0.12.2
+      # - pillow==12.0.0
+      - safetensors==0.7.0
+      - scikit-learn==1.7.2
+      - scipy==1.16.3
+      - seaborn==0.13.2
+      - git+https://github.com/google-research/timesfm.git
+      # - timesfm==2.0.0
+      - tokenizers==0.13.3
+      - torch==2.9.1
+      - torch-summary==1.4.5
+      - tqdm==4.67.1
+      - transformers==4.33.3
+      - numpy==1.26.4

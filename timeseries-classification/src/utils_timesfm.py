@@ -65,7 +65,7 @@ def process_inputs(model, inputs):
     context = model.forecast_config.max_context
     
     for each_input in inputs:
-        value = linear_interpolation(strip_leading_nans(np.array(each_input)))
+        value = linear_interpolation(strip_leading_nans(np.array(each_input.cpu())))
         if (w := len(value)) >= context:
             value = value[-context:]
             mask = np.zeros_like(value, dtype=bool)

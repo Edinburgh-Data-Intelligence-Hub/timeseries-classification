@@ -61,7 +61,7 @@ class Embedder(nn.Module):
             hidden_size = 90
             hidden_layer_depth = 2
 
-            cuda = True if self.device=='cuda' else False
+            cuda = True if self.device==torch.device('cuda') else False
             model = VRAE(
                 sequence_length=sequence_length,
                 number_of_features = number_of_features,
@@ -93,7 +93,7 @@ class Embedder(nn.Module):
             _, output_embeddings = utils_timesfm.get_embeddings(
                 horizon=12,
                 model=self.model,
-                inputs=inputs,
+                inputs=inputs.to(self.device),
                 layers_to_hook=-1,
             )
             return output_embeddings[0][:,-1,:]
@@ -118,7 +118,7 @@ class Embedder(nn.Module):
             return self.model.transform(
                 TensorDataset(
                     torch.from_numpy(
-                        TimeSeriesScalerMeanVariance().fit_transform(inputs)
+                        TimeSeriesScalerMeanVariance().fit_transform(inputs.cpu()) # ensure it is cpu to convert to numpy
                     )
                 )
             )
@@ -177,6 +177,7 @@ class tsClassifier(nn.Module):
         self.num_classes = num_classes
         self.hidden_dims = hidden_dims
         self.dropout = dropout
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self.mlp = EmbeddingMLP(
             input_dim=self.embedder.embedding_dim,
@@ -198,6 +199,7 @@ class tsClassifier(nn.Module):
         if not isinstance(embeddings, torch.Tensor):
             embeddings = torch.as_tensor(embeddings)
 
+        embeddings = embeddings.to(self.device) # move embeddings to same device
         logits = self.mlp(embeddings)
         return logits
     
@@ -225,7 +227,7 @@ def load_tsclassifier(
 ) -> tsClassifier:
     
     # Load MLP
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=torch.device(device))
     
     # Load embedder
     embedder = Embedder(
@@ -244,7 +246,7 @@ def load_tsclassifier(
     )
     
     model.mlp.load_state_dict(checkpoint["mlp_state_dict"])
-    model.to(device)
+    model.to(torch.device(device))
     model.eval()
     
     return model
