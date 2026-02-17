@@ -209,18 +209,6 @@ def main(
     else:
         raise ValueError("task must be 'cip', 'tet' or 'ciptet'")
 
-    # if task == 'cip':
-    #     X = [x for x,y in zip(all_proj_trunc,liste_y) if 'tet' not in y[1] and y[0] in used_media]   #explanation: y[1] is treatment, by checking if 'tet' not in y[1] we select only 'control' and 'cip' conditions
-    #     y = [condition_label[y[1]] for y in liste_y if  'tet' not in y[1] and y[0] in used_media]
-    # elif task == 'tet':
-    #     X = [x for x,y in zip(all_proj_trunc,liste_y) if 'cip' not in y[1] and y[0] in used_media] #explanation: y[1] is treatment, by checking if 'cip' not in y[1] we select only 'control' and 'tet' conditions
-    #     y = [condition_label[y[1]] for y in liste_y if  'cip' not in y[1] and y[0] in used_media]
-    # elif task == 'ciptet':
-    #     X = [x for x,y in zip(all_proj_trunc,liste_y) if len(y[1]) > 4 and y[0] in used_media] #explanation: y[1] is treatment, by checking if len(y[1]) > 4 we select only 'ciptet' and 'control' condition
-    #     y = [condition_label[y[1]] for y in liste_y if len(y[1]) > 4 and y[0] in used_media]
-    # else:
-    #     raise ValueError("task must be 'cip', 'tet' or 'ciptet'")
-
     # Split into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(
         X, y,
@@ -263,75 +251,75 @@ def main(
         pickle.dump(y_test, f)
     f.close()
 
-    # ###### autoencoder training dataset creation
-    # dataset_type = "autoencoder_training"
-    # scaling = True
-    # dataset_name_list_controls = [
-    #     'gly_control_1',
-    #     'gly_control_2',
-    #     'gly_control_3',
-    #     'glu_control_1',
-    #     'glu_control_2',
-    #     'gluaa_control_1',
-    #     'gluaa_control_2'
-    # ]
-    # liste_x_autoencoder, liste_y_autoencoder = process_track_data(
-    #     df_tracks=df_tracks, 
-    #     dataset_name_list=dataset_name_list_controls, 
-    #     dataset_type=dataset_type
-    # )
+    ###### autoencoder training dataset creation
+    dataset_type = "autoencoder_training"
+    scaling = True
+    dataset_name_list_controls = [
+        'gly_control_1',
+        'gly_control_2',
+        'gly_control_3',
+        'glu_control_1',
+        'glu_control_2',
+        'gluaa_control_1',
+        'gluaa_control_2'
+    ]
+    liste_x_autoencoder, liste_y_autoencoder = process_track_data(
+        df_tracks=df_tracks, 
+        dataset_name_list=dataset_name_list_controls, 
+        dataset_type=dataset_type
+    )
     
-    # X_train_preaug, X_test_preaug, y_train_preaug, y_test_preaug = train_test_split(
-    #     liste_x_autoencoder, 
-    #     liste_y_autoencoder, 
-    #     test_size=0.1, 
-    #     random_state=SEED, 
-    #     shuffle=True
-    # )
+    X_train_preaug, X_test_preaug, y_train_preaug, y_test_preaug = train_test_split(
+        liste_x_autoencoder, 
+        liste_y_autoencoder, 
+        test_size=0.1, 
+        random_state=SEED, 
+        shuffle=True
+    )
 
-    # #### data augmentation
-    # ##### in X_train we change each sequence to series of size 72 with a roling window of 6
-    # liste_x_train = []
-    # liste_y_train = []
-    # for i in range(len(X_train_preaug)):
-    #     usable_data = X_train_preaug[i]
-    #     for j in range(0, len(usable_data) - 72 + 1, 6):
-    #         liste_x_train.append(usable_data[j:j+72])
-    #         liste_y_train.append(y_train_preaug[i])
-    # X_train = np.array(liste_x_train)
-    # if scaling:
-    #     X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
-    # y_train = np.array(liste_y_train)
+    #### data augmentation
+    ##### in X_train we change each sequence to series of size 72 with a roling window of 6
+    liste_x_train = []
+    liste_y_train = []
+    for i in range(len(X_train_preaug)):
+        usable_data = X_train_preaug[i]
+        for j in range(0, len(usable_data) - 72 + 1, 6):
+            liste_x_train.append(usable_data[j:j+72])
+            liste_y_train.append(y_train_preaug[i])
+    X_train = np.array(liste_x_train)
+    if scaling:
+        X_train = TimeSeriesScalerMeanVariance().fit_transform(X_train)
+    y_train = np.array(liste_y_train)
 
-    # # In X_test we cut each sequence into unique 72-long sequences
-    # liste_x_test = []
-    # liste_y_test = []
-    # for i in range(len(X_test_preaug)):
-    #     usable_data = X_test_preaug[i]
-    #     for j in range(0, len(usable_data) - 72 + 1, 72):
-    #         liste_x_test.append(usable_data[j:j + 72])
-    #         liste_y_test.append(y_test_preaug[i])
-    # X_test = np.array(liste_x_test)
-    # if scaling:
-    #     X_test = TimeSeriesScalerMeanVariance().fit_transform(X_test)
-    # y_test = np.array(liste_y_test)
+    # In X_test we cut each sequence into unique 72-long sequences
+    liste_x_test = []
+    liste_y_test = []
+    for i in range(len(X_test_preaug)):
+        usable_data = X_test_preaug[i]
+        for j in range(0, len(usable_data) - 72 + 1, 72):
+            liste_x_test.append(usable_data[j:j + 72])
+            liste_y_test.append(y_test_preaug[i])
+    X_test = np.array(liste_x_test)
+    if scaling:
+        X_test = TimeSeriesScalerMeanVariance().fit_transform(X_test)
+    y_test = np.array(liste_y_test)
 
-    # # Save autoencoder training data
-    # with open(PROCESSED_DATA_DIR/'X_autoencoder_train.pkl', 'wb') as f:
-    #     pickle.dump(X_train, f)
-    # f.close()
+    # Save autoencoder training data
+    with open(PROCESSED_DATA_DIR/'X_autoencoder_train.pkl', 'wb') as f:
+        pickle.dump(X_train, f)
+    f.close()
 
-    # with open(PROCESSED_DATA_DIR/'y_autoencoder_train.pkl', 'wb') as f:
-    #     pickle.dump(y_train, f)
-    # f.close()
+    with open(PROCESSED_DATA_DIR/'y_autoencoder_train.pkl', 'wb') as f:
+        pickle.dump(y_train, f)
+    f.close()
 
-    # with open(PROCESSED_DATA_DIR/'X_autoencoder_test.pkl', 'wb') as f:
-    #     pickle.dump(X_test, f)
-    # f.close()
+    with open(PROCESSED_DATA_DIR/'X_autoencoder_test.pkl', 'wb') as f:
+        pickle.dump(X_test, f)
+    f.close()
 
-    # with open(PROCESSED_DATA_DIR/'y_autoencoder_test.pkl', 'wb') as f:
-    #     pickle.dump(y_test, f)
-    # f.close()
+    with open(PROCESSED_DATA_DIR/'y_autoencoder_test.pkl', 'wb') as f:
+        pickle.dump(y_test, f)
+    f.close()
 
 if __name__ == "__main__":
     main()

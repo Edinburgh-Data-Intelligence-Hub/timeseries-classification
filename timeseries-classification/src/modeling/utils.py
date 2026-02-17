@@ -53,7 +53,7 @@ def get_dataloader(
     return loader
 
 def create_model(
-    device: torch.device = torch.device("cpu"),
+    device: torch.device = torch.device,
     num_classes: int = 2,
     hidden_dims: list = [20, 10],
     dropout: float = 0.1,
