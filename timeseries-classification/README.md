@@ -7,6 +7,7 @@ This repository implements a modular pipeline for **binary classification of *E.
 - **ciptet** – A combination of the two treatments
 
 More information about the experimental setup, doses and data generation can be found in [[1]](#1).
+
 ---
 
 ## Model Overview
@@ -85,7 +86,7 @@ cd ./timeseries-classification/timeseries-classification/
 ```
 
 ### 3. Create dataset split (for Autoencoders and MLP)
-Processes raw data (growth_antibiotic_dataset.csv) and then creates split for experiments. You need to define 
+Processes raw data (growth_antibiotic_dataset.csv) and then creates split for experiments. You need to define which variable to use (size = cell length, sos = cell fluorescence), wether the data need to be re-scaled or not and the task (cip, tet or ciptet).
 ```bash
 python3 -m src.dataset
 ```
@@ -130,20 +131,20 @@ python3 -m src.modeling.predict
 ## Project Organization
 
 ```
-├── LICENSE            <- Open-source license if one is chosen
-├── README.md          <- The top-level README for developers using this project.
+├── LICENSE
+├── README.md
 │
 ├── models             <- Trained models
     │
-    ├── ts2vec_encoders.py      <- Trained ts2vec encoders saved at different epochs
+    ├── ts2vec_encoders      <- Trained ts2vec encoders saved at different epochs
 │
-├── notebooks          <- Jupyter notebooks.
+├── notebooks          <- Jupyter notebooks for data analysis and visualisation
 │
-├── environment.yml   <- The requirements file for reproducing the analysis environment
+├── environment.yml
 │
-└── src   <- Source code for use in this project.
+└── src
     │
-    ├── __init__.py             <- Makes a Python module
+    ├── __init__.py
     │
     ├── config.py               <- Store useful variables and configuration
     │
@@ -161,12 +162,12 @@ python3 -m src.modeling.predict
     │
     ├── modeling                
     │   ├── __init__.py 
-    │   ├── hpo.py              <- Code to do hyperparameter tuning with optuna and mlflow   
+    │   ├── hpo.py              <- Code to do hyperparameter tuning with optuna  
     │   ├── test_ts2vec.py      <- Code to do calculate loss on testset for ts2vec AE at specific epochs
     │   ├── train_ts2vec.py     <- Code to train ts2vec
     │   ├── train_model.py      <- Code to train MLP models
     │   ├── predict.py          <- Code to run model inference with trained models    
-    │   ├── best_params.py      <- Code consolidate best parameters from hpo  
+    │   ├── best_params.py      <- Extract best parameters from hpo optuna study
     │   └── utils.py            <- Utility functions for modeling scripts
 ```
 
