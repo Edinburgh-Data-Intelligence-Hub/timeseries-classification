@@ -2,12 +2,11 @@
 
 This repository implements a modular pipeline for **binary classification of *E. coli* time-series signals** across three tasks:
 
-- **cip** – [PLACEHOLDER: Define clearly, e.g., ciprofloxacin response]
-- **tet** – [PLACEHOLDER: Define clearly, e.g., tetracycline response]
-- **ciptet** – [PLACEHOLDER: Define clearly, e.g., combined or multi-label task]
+- **cip** – An antibiotic causing DNA damage in teh cell
+- **tet** – An antibiotic slowing down cell growth
+- **ciptet** – A combination of the two treatments
 
-[PLACEHOLDER: Clearly define what the binary label represents (e.g., resistant vs susceptible, growth vs no growth, etc.)]
-
+More information about the experimental setup, doses and data generation can be found in [[1]](#1).
 ---
 
 ## Model Overview
@@ -18,22 +17,17 @@ The core model, `tsClassifier`, consists of two components:
 
 The embedder converts a raw time series into a fixed-length embedding vector. The following embedders are supported:
 
-- **TimesFM**  
-  Foundation model used as-is (no additional training or fine-tuning in this repository).  
-  [PLACEHOLDER: Add link/reference to TimesFM paper/repository]
+- **VRAE**  
+  A variational Recurrent Auto-Encoder architecture from https://github.com/tejaslodaya/timeseries-clustering-vae. Model was pre-trained on control data from this dataset (it has never seen antibiotic data, more information in [[2]](#2)), model checkpoint provided at: models/model_12.pth.
 
 - **MOMENT**  
-  Foundation model used as-is (no additional training or fine-tuning in this repository).  
-  [PLACEHOLDER: Add link/reference to MOMENT paper/repository]
+  Foundation model used as-is (no additional training or fine-tuning in this repository), from [[3]](#3), the "MOMENT1-base" version was used.
 
-- **VRAE**  
-  Pre-trained model checkpoint provided at: models/model_12.pth
-
-[PLACEHOLDER: Clarify when/where this model was trained and on which dataset split]
+- **TimesFM**  
+  Foundation model used as-is (no additional training or fine-tuning in this repository), from [[4]](#4).
 
 - **TS2Vec**  
-Self-supervised representation model trained within this project.  
-[PLACEHOLDER: Add link/reference to TS2Vec paper/repository]
+Self-supervised representation model trained within this project, from [[5]](#5)
 
 ---
 
@@ -74,21 +68,12 @@ This results in three independently trained classifier heads per embedder.
 
 ---
 
-## 📌 Notes
-
-- Foundation models (TimesFM, MOMENT) are not fine-tuned in this repository.
-- TS2Vec is trained within this project.
-- VRAE uses a previously trained checkpoint.
-
-[PLACEHOLDER: Add citation instructions if required]
-
-
 ## ⚙️ Environment Setup and code
 
 ### 1. Clone the repository
 
 ```bash
-git clone 
+git clone https://github.com/Edinburgh-Data-Intelligence-Hub/timeseries-classification.git
 cd timeseries-classification/
 ```
 
@@ -100,7 +85,7 @@ cd ./timeseries-classification/timeseries-classification/
 ```
 
 ### 3. Create dataset split (for Autoencoders and MLP)
-Processes raw data (growth_antibiotic_dataset.csv) and then creates split for experiments
+Processes raw data (growth_antibiotic_dataset.csv) and then creates split for experiments. You need to define 
 ```bash
 python3 -m src.dataset
 ```
@@ -181,3 +166,13 @@ python3 -m src.modeling.train_model
 
 --------
 
+## References
+<a id="1">[1]</a> Broughton, J., Fraisse, A. & El Karoui, M. Suppression of bacterial cell death underlies the antagonistic interaction between ciprofloxacin and tetracycline. Mol Syst Biol 22, 102–118 (2026). https://doi.org/10.1038/s44320-025-00162-w
+
+<a id="2">[2]</a> Achille Fraisse, Diego A. Oyarzún, Meriem El Karoui. Representation learning of single-cell time-series with deep variational autoencoders. bioRxiv 2025.09.22.677729; doi: https://doi.org/10.1101/2025.09.22.677729
+
+<a id="3">[3]</a> Mononito Goswami and Konrad Szafer and Arjun Choudhry and Yifu Cai and Shuo Li and Artur Dubrawski, MOMENT: A Family of Open Time-series Foundation Models, https://arxiv.org/abs/2402.03885
+
+<a id="4">[4]</a> Abhimanyu Das, Weihao Kong, Rajat Sen, Yichen Zhou. A decoder-only foundation model for time-series forecasting. https://arxiv.org/html/2310.10688v2
+
+<a id="5">[5]</a> Zhihan Yue and Yujing Wang and Juanyong Duan and Tianmeng Yang and Congrui Huang and Yunhai Tong and Bixiong Xu. TS2Vec: Towards Universal Representation of Time Series. arXiv, https://arxiv.org/abs/2106.10466. 

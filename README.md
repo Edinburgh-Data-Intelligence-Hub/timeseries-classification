@@ -8,7 +8,7 @@ Some experiments were conducted under antibiotic exposure and the aim of the ana
 
 ![alt text](timeseries_example.jpg)
 
-We previously used a Variational Recurrent Autoencoder to learn representations of those time series and performed classification on the embeddings using a Multi Layer Perceptron model[[2]](#2). This study aim to implement two foundational models ([[3]](#3),[[4]](#4)) and an alternavtive encoder training pipeline.
+We previously used a Variational Recurrent Autoencoder to learn representations of those time series and performed classification on the embeddings using a Multi Layer Perceptron model[[2]](#2). This study aim to implement two foundational models ([[3]](#3),[[4]](#4)) and an alternavtive encoder training pipeline.[[5]](#5)
 
 More information inside the code repo.
 
@@ -21,3 +21,5 @@ More information inside the code repo.
 <a id="3">[3]</a> Mononito Goswami and Konrad Szafer and Arjun Choudhry and Yifu Cai and Shuo Li and Artur Dubrawski, MOMENT: A Family of Open Time-series Foundation Models, https://arxiv.org/abs/2402.03885
 
 <a id="4">[4]</a> Abhimanyu Das, Weihao Kong, Rajat Sen, Yichen Zhou. A decoder-only foundation model for time-series forecasting. https://arxiv.org/html/2310.10688v2
+
+<a id="5">[5]</a> Zhihan Yue and Yujing Wang and Juanyong Duan and Tianmeng Yang and Congrui Huang and Yunhai Tong and Bixiong Xu. TS2Vec: Towards Universal Representation of Time Series. arXiv, https://arxiv.org/abs/2106.10466. 
