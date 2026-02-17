@@ -70,8 +70,7 @@ def main():
         }
     )
     
-    # results_df.to_csv(f"{RESULTS_DIR}/predictions/final_test_predictions_tsclassifier_{ename}_{task}.csv", index=False)
-
+    results_df.to_csv(f"{RESULTS_DIR}/predictions/final_test_predictions_tsclassifier_{ename}_{task}.csv", index=False)
 
 if __name__ == "__main__":
     main()
