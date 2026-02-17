@@ -115,12 +115,17 @@ python3 -m src.modeling.hpo
 ```
 
 ### 6. Train final tsClassifier instances
-Using best parameters train final instances. Models are stored in models.
+First save best parameters using best_params.py for all embedders from HPO which can then be loaded for training. 
+Train final model instances using best parameters. Models are stored in ./models.
 ```bash
 python3 -m src.modeling.train_model
 ```
 
-
+### 7. Prediction
+Using trained models, predict using *X_{task}_test.pkl*, *y_{task}_test.pkl*,
+```bash
+python3 -m src.modeling.predict
+```
 
 ## Project Organization
 
@@ -160,7 +165,8 @@ python3 -m src.modeling.train_model
     │   ├── test_ts2vec.py      <- Code to do calculate loss on testset for ts2vec AE at specific epochs
     │   ├── train_ts2vec.py     <- Code to train ts2vec
     │   ├── train_model.py      <- Code to train MLP models
-    │   ├── predict.py          <- Code to run model inference with trained models      
+    │   ├── predict.py          <- Code to run model inference with trained models    
+    │   ├── best_params.py      <- Code consolidate best parameters from hpo  
     │   └── utils.py            <- Utility functions for modeling scripts
 ```
 
