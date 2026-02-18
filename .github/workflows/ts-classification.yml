@@ -1,0 +1,34 @@
+name: python VRAE
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Conda from lockfile
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          environment-file: environment.lock.yml
+          activate-environment: ts-classification-env       # name inside the lockfile (ignored if specified there)
+          auto-activate-base: false
+          use-mamba: true
+
+
+      - name: Run tests
+        shell: bash -l {0}
+        run: |
+          conda activate ts-classification-env
+          pytest -v
